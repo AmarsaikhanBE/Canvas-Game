@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ping Pong</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            min-height: 100vh;
+            display: grid;
+            place-content: center;
+            background-color: #aaa;
+        }
+        
+        .player {
+            text-align: center;
+            margin: 1rem 0;
+            text-transform: uppercase;
+            font-size: 2rem;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="player">Player 1</div>
+    <canvas id="myCanvas"></canvas>
+    <div class="player">Player 2</div>
+    <script>
+        const canv = document.querySelector('#myCanvas');
+        canv.width = 376;
+        canv.height = 601;
+        const cellSize = 15;
+        let p1Length = 5;
+        let p2Length = 5;
+        const p1 = {
+            x: Math.floor(canv.width / 2 - cellSize * p1Length / 2),
+            y: cellSize
+        };
+        const p2 = {
+            x: Math.floor(canv.width / 2 - cellSize * p1Length / 2),
+            y: canv.height - 1 - cellSize * 2
+        };
+        let p1Scr = 0;
+        let p2Scr = 0;
+        let ballX = Math.floor(Math.random() * (canv.width - 1));
+        // let ballY = Math.floor(Math.random() * (canv.height - 1));
+        let ballY = cellSize;
+        const ballR = cellSize / 2;
+        let hor = '';
+        let ver = '';
+        const ctx = canv.getContext('2d');
+        canv.setAttribute('tabindex', 1);
+        canv.style.outline = 'none';
+        canv.focus();
+        // Table
+        const setTable = () => {
+            ctx.fillStyle = 'darkgreen';
+            ctx.fillRect(0, 0, canv.width, canv.height);
+            ctx.strokeStyle = 'white';
+            ctx.lineWidth = 5;
+            ctx.strokeRect(ctx.lineWidth / 2, ctx.lineWidth / 2, canv.width - 5, canv.height / 2 - ctx.lineWidth / 2);
+            ctx.strokeRect(ctx.lineWidth / 2, canv.height / 2, canv.width - 5, canv.height / 2 - ctx.lineWidth / 2);
+        };
+        // Ball
+        const drawBall = () => {
+            ctx.fillStyle = 'white';
+            ctx.arc(ballX + ballR, ballY + ballR, ballR, 0, 2 * Math.PI);
+            ctx.fill();
+        };
+        // Player
+        const drawPlayer = (p, pLength, color) => {
+            for (let i = 0; i < pLength; i++) {
+                ctx.beginPath();
+                ctx.fillStyle = color;
+                ctx.fillRect(p.x + cellSize * i, p.y, cellSize, cellSize);
+                ctx.strokeStyle = 'white';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(p.x + cellSize * i, p.y, cellSize, cellSize);
+            };
+        };
+        // Move player
+        const moveP = (keycode) => {
+            if (keycode == 65 && p1.x - cellSize >= 0) p1.x -= cellSize * 2;
+            if (keycode == 68 && p1.x + cellSize * p1Length <= canv.width - 1 - cellSize) p1.x += cellSize * 2;
+            if (keycode == 83 && p1.y < (canv.height - 1) / 2 - cellSize * 3) p1.y += cellSize * 2;
+            if (keycode == 87 && p1.y > cellSize) p1.y -= cellSize * 2;
+            if (keycode == 37 && p2.x - cellSize >= 0) p2.x -= cellSize * 2;
+            if (keycode == 39 && p2.x + cellSize * p2Length <= canv.width - 1 - cellSize) p2.x += cellSize * 2;
+            if (keycode == 38 && p2.y > (canv.height - 1) / 2 + cellSize * 3) p2.y -= cellSize * 2;
+            if (keycode == 40 && p2.y < (canv.height - 1) - cellSize * 2) p2.y += cellSize * 2;
+        };
+        // Move ball
+        const moveB = () => {
+            // bounce on horizontal sides
+            if (hor == 'right') {
+                ballX += cellSize;
+                if (ballX > canv.width - 1 - cellSize) {
+                    ballX -= cellSize;
+                    hor = 'left';
+                };
+            } else if (hor == 'left') {
+                ballX -= cellSize;
+                if (ballX < 0) {
+                    ballX += cellSize;
+                    hor = 'right';
+                };
+            };
+            // bounce on player board
+            if (ver == 'down') {
+                ballY += cellSize;
+                if (ballY == p2.y - cellSize && ballX >= p2.x && ballX <= p2.x + cellSize * (p2Length)) ver = 'up';
+                if (ballY >= canv.height - cellSize) {
+                    alert('Win player 1');
+                    p1Length++;
+                    p2Length--;
+                    ver = 'up'
+                };
+            } else if (ver == 'up') {
+                ballY -= cellSize;
+                if (ballY == p1.y + cellSize && ballX >= p1.x && ballX <= p1.x + cellSize * (p1Length)) ver = 'down';
+                if (ballY < 0) {
+                    alert('Win player 2');
+                    p1Length--;
+                    p2Length++;
+                    ver = 'down'
+                };
+            };
+            drawBall();
+        };
+        // Game
+        const game = () => {
+            canv.onkeydown = event => {
+                event = event || window.event;
+                moveP(event.keyCode);
+            };
+            ctx.beginPath();
+            setTable();
+            drawPlayer(p1, p1Length, 'red');
+            drawPlayer(p2, p2Length, 'blue');
+            moveP();
+            moveB();
+            if (p1Length < 1 || p2Length < 1) clearInterval(loop);
+        };
+        const newGame = () => {
+            hor == 'left' ? hor = 'right' : hor = 'left';
+            ver == 'down' ? ver = 'up' : ver = 'down';
+            loop = setInterval(game, 75);
+        };
+        newGame();
+    </script>
+</body>
+
+</html>
